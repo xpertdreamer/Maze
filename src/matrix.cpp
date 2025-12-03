@@ -25,6 +25,11 @@ namespace course {
 
     bool &Matrix::operator()(const int row, const int col) { return matrix_[row][col]; }
 
+    Matrix::~Matrix() {
+        deallocate();
+    }
+
+
     void Matrix::allocate(const int rows, const int cols) {
         rows_ = rows;
         cols_ = cols;

@@ -24,7 +24,16 @@ namespace course {
     public:
         int getRows() const { return rows_; }
         int getCols() const { return cols_; }
+        Matrix& get_h_walls() {return hWalls_;}
+        Matrix& get_v_walls() {return vWalls_;}
+
+        void set_sizes(int rows, int cols);
+        void from_file(const std::string& filename);
         static bool get_random_bool();
+        void generate_maze();
+        void print_maze();
+        void clear_gen();
+        void to_file(const std::string& filename);
 
     private:
         void fill_empty_value();
@@ -38,6 +47,10 @@ namespace course {
         void prepare_new_line(int row);
         void add_end_line();
         void check_end_line();
+
+        inline void allocate_walls();
+        void parse_size();
+        void parse_walls(Matrix& walls);
     };
 }
 
