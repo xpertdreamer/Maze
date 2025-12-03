@@ -1,5 +1,5 @@
 add_library(maze_lib
-        maze_tools/maze.cpp
+        maze.cpp
         matrix.cpp
 )
 
