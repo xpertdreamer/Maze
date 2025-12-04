@@ -20,13 +20,19 @@ namespace course {
         std::ifstream mazeFile_;
         std::vector<int> sideLine_;
         int counter_{0};
+        std::pair<int, int> entrance_;
+        std::pair<int, int> exit_;
 
     public:
         int getRows() const { return rows_; }
         int getCols() const { return cols_; }
         Matrix& get_h_walls() {return hWalls_;}
         Matrix& get_v_walls() {return vWalls_;}
+        auto get_entrance() const { return entrance_; }
+        auto get_exit() const { return exit_; }
 
+        void set_entrance(int row, int col);
+        void set_exit(int row, int col);
         void set_sizes(int rows, int cols);
         void from_file(const std::string& filename);
         static bool get_random_bool();

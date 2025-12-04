@@ -36,6 +36,7 @@ int main() {
                     maze.generate_maze();
                     maze_initialized = true;
                     std::cout << "Maze " << rows << "x" << cols << " generated successfully!" << std::endl;
+                    maze.print_maze();
                 } else {
                     std::cout << "Error: Rows and cols must be between 1 and 60" << std::endl;
                 }

@@ -10,6 +10,8 @@ namespace course {
     void Maze::clear_gen() {
         sideLine_.clear();
         counter_ = 1;
+        entrance_ = {0, 0};
+        exit_ = {rows_ - 1, cols_ - 1};
     }
 
     bool Maze::get_random_bool() {
@@ -21,6 +23,7 @@ namespace course {
 
     // Merging cells into one set
     void Maze::merge_set(const int i, const int element) {
+        if (i + 1 >= cols_) return;
         const auto mutableSet = sideLine_[i + 1];
         for (auto j = 0; j < cols_; j++)
             // Checking cells for one set
@@ -30,9 +33,7 @@ namespace course {
 
 
     void Maze::fill_empty_value() {
-        for (auto i = 0; i < cols_; i++) {
-            sideLine_.push_back(EMPTY);
-        }
+        sideLine_.assign(cols_, EMPTY);
     }
 
     // To cells
@@ -49,6 +50,15 @@ namespace course {
     // Add right vertical wall
     void Maze::add_vertical_walls(const int row) {
         for (auto i = 0; i < cols_ - 1; i++) {
+            if (row == exit_.first && i == exit_.second) {
+                vWalls_(row, i) = false;
+                continue;
+            }
+            if (row == entrance_.first && i == entrance_.second - 1) {
+                vWalls_(row, i) = false;
+                continue;
+            }
+
             // A condition to prevent looping
             if (const auto choice = get_random_bool(); choice == true || sideLine_[i] == sideLine_[i + 1])
                 vWalls_(row, i) = true;
@@ -63,9 +73,20 @@ namespace course {
     // Add bottom wall
     void Maze::add_horizontal_walls(const int row) {
         for (auto i = 0; i < cols_; i++) {
+            if (row == exit_.first - 1 && i == exit_.second) {
+                hWalls_(row, i) = false;
+                continue;
+            }
+            if (row == 0 && i == entrance_.second) {
+                hWalls_(row, i) = false;
+                continue;
+            }
+
             // The condition that the set has more than one cell
             if (const auto choice = get_random_bool(); calc_unique_set(sideLine_[i]) != 1 && choice == true)
                 hWalls_(row, i) = true;
+            else
+                hWalls_(row, i) = false;
         }
     }
 
@@ -89,15 +110,28 @@ namespace course {
 
     // 4.1 and 4.2
     void Maze::check_horizontal_walls(const int row) {
-        for (auto i = 0; i < cols_; i++)
-            if (calc_horizontal_walls(sideLine_[i], row == 0))
-                hWalls_(row, i) = false;
+        for (auto i = 0; i < cols_; i++) {
+            if ((row == 0 && i == entrance_.second) ||
+                (row == exit_.first - 1 && i == exit_.second)) {
+                continue;
+            }
+
+            if (calc_horizontal_walls(sideLine_[i], row) == 0)
+                for (auto j = 0; j < cols_; j++) {
+                    if (sideLine_[j] == sideLine_[i]) {
+                        hWalls_(row, j) = false;
+                        break;
+                    }
+                }
+        }
     }
 
     void Maze::prepare_new_line(const int row) {
         for (auto i = 0; i < cols_; i++)
             if (hWalls_(row, i) == true)
-                sideLine_[i] = EMPTY;
+                if (!((row == 0 && i == entrance_.second) ||
+                 (row == exit_.first - 1 && i == exit_.second)))
+                    sideLine_[i] = EMPTY;
     }
 
     void Maze::add_end_line() {
@@ -108,7 +142,13 @@ namespace course {
 
     // Checking conditions for adding the last line
     void Maze::check_end_line() {
-        for (auto i = 0; i < cols_; i++) {
+        for (auto i = 0; i < cols_ - 1; i++) {
+            if (i == exit_.second && exit_.first == rows_ - 1) {
+                vWalls_(rows_ - 1, i) = false;
+                merge_set(i, sideLine_[i]);
+                continue;
+            }
+
             // 5.2.1
             if (sideLine_[i] != sideLine_[i + 1]) {
                 // Remove vertical wall
@@ -119,8 +159,14 @@ namespace course {
             // Add horizontal walls
             hWalls_(rows_ - 1, i) = true;
         }
-        // Add horizontal wall in the last cell
-        hWalls_(rows_ - 1, cols_ - 1) = true;
+        // Add horizontal wall except for exit position
+        for (auto i = 0; i < cols_; i++) {
+            if (exit_.first == rows_ - 1 && i == exit_.second) {
+                hWalls_(rows_ - 1, i) = false;
+            } else {
+                hWalls_(rows_ - 1, i) = true;
+            }
+        }
     }
 
     void Maze::generate_maze() {
@@ -139,12 +185,35 @@ namespace course {
         }
         // 5.2
         add_end_line();
+        check_end_line();
+
+        if (entrance_.first == 0) {
+            hWalls_(0, entrance_.second) = false;
+        }
+
+        if (exit_.first == rows_ - 1) {
+            hWalls_(rows_ - 1, exit_.second) = false;
+        }
+    }
+
+    void Maze::set_entrance(int row, int col) {
+        if (row >= 0 && row < rows_ && col >= 0 && col < cols_) {
+            entrance_ = {row, col};
+        }
+    }
+
+    void Maze::set_exit(int row, int col) {
+        if (row >= 0 && row < rows_ && col >= 0 && col < cols_) {
+            exit_ = {row, col};
+        }
     }
 
     void Maze::set_sizes(const int rows, const int cols) {
         rows_ = rows;
         cols_ = cols;
         allocate_walls();
+        entrance_ = {0, 0};
+        exit_ = {rows_ - 1, cols_ - 1};
     }
 
     inline void Maze::allocate_walls() {
@@ -160,6 +229,8 @@ namespace course {
         cols_ = std::stoi(line, &subPos);
         if ((rows_ < 0 || rows_ > 60) && (cols_ < 0 || cols_ > 60))
             throw std::invalid_argument("Wrong maze size");
+        entrance_ = {0, 0};
+        exit_ = {rows_ - 1, cols_ - 1};
     }
 
     void Maze::parse_walls(Matrix &walls) {
@@ -183,34 +254,111 @@ namespace course {
         parse_walls(hWalls_);
     }
 
+    // void Maze::print_maze() {
+    //     std::cout << std::endl;
+    //     for (auto j = 0; j < cols_; j++) {
+    //         if (entrance_.first == 0 && entrance_.second == j) {
+    //             std::cout << "  ";
+    //         } else {
+    //             std::cout << " _";
+    //         }
+    //     }
+    //     std::cout << std::endl;
+    //
+    //     for (auto i = 0; i < rows_; i++) {
+    //         if (entrance_.first == i && entrance_.second == 0) {
+    //             std::cout << " ";
+    //         } else {
+    //             std::cout << "|";
+    //         }
+    //
+    //         for (auto j = 0; j < cols_; j++) {
+    //             char cell = ' ';
+    //             if (i < rows_ - 1 && hWalls_(i, j) == true || i == rows_ - 1) {
+    //                 cell = '_';
+    //             }
+    //             std::cout << cell;
+    //
+    //             if (exit_.first == i && exit_.second == j && j == cols_ - 1) {
+    //                 std::cout << ' ';
+    //             } else if (j < cols_ - 1 && vWalls_(i, j) == true || j == cols_ - 1) {
+    //                 std::cout << '|';
+    //             } else {
+    //                 std::cout << ' ';
+    //             }
+    //         }
+    //         std::cout << std::endl;
+    //     }
+    //     std::cout << std::endl;
+    // }
+
     void Maze::print_maze() {
-        std::cout << std::endl;
-        for (auto j = 0; j < cols_; j++) {
-            std::cout << " _";
-        }
-        std::cout << std::endl;
+        std::cout << "\n";
 
-        for (auto i = 0; i < rows_; i++) {
-            std::cout << "|";
-            for (auto j = 0; j < cols_; j++) {
-                if (i < rows_ - 1 && hWalls_(i, j) == true || i == rows_ - 1)
-                    std::cout << '_';
-                else
-                    std::cout << ' ';
-
-                if (j < cols_ - 1 && vWalls_(i, j) == true || j == cols_ - 1)
-                    std::cout << '|';
-                else
-                    std::cout << ' ';
+        for (int j = 0; j < cols_; j++) {
+            std::cout << "+";
+            if (entrance_.first == 0 && entrance_.second == j) {
+                std::cout << " E ";
+            } else {
+                std::cout << "---";
             }
-            std::cout << std::endl;
         }
-        std::cout << std::endl;
+        std::cout << "+\n";
+
+        for (int i = 0; i < rows_; i++) {
+            std::cout << "|";
+            for (int j = 0; j < cols_; j++) {
+                if (entrance_.first == i && entrance_.second == j) {
+                    std::cout << " E ";
+                } else if (exit_.first == i && exit_.second == j) {
+                    std::cout << " X ";
+                } else {
+                    std::cout << "   ";
+                }
+
+                if (j < cols_ - 1) {
+                    if (vWalls_(i, j)) {
+                        std::cout << "|";
+                    } else {
+                        std::cout << " ";
+                    }
+                } else {
+                    std::cout << "|";
+                }
+            }
+            std::cout << "\n";
+
+            if (i < rows_ - 1) {
+                std::cout << "+";
+                for (int j = 0; j < cols_; j++) {
+                    if (hWalls_(i, j)) {
+                        std::cout << "---+";
+                    } else {
+                        std::cout << "   +";
+                    }
+                }
+                std::cout << "\n";
+            }
+        }
+
+        std::cout << "+";
+        for (int j = 0; j < cols_; j++) {
+            if (exit_.first == rows_ - 1 && exit_.second == j) {
+                std::cout << " X +";
+            } else {
+                std::cout << "---+";
+            }
+        }
+        std::cout << "\n\n";
     }
 
     void Maze::to_file(const std::string &filename) {
         std::ofstream file(filename);
         file << rows_ << " " << cols_ << std::endl;
+
+        file << entrance_.first << " " << entrance_.second << std::endl;
+        file << exit_.first << " " << exit_.second << std::endl;
+
         for (auto i = 0; i < rows_; i++) {
             for (auto j = 0; j < cols_; j++) {
                 file << vWalls_(i, j) << " ";
