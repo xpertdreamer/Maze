@@ -356,9 +356,6 @@ namespace course {
         std::ofstream file(filename);
         file << rows_ << " " << cols_ << std::endl;
 
-        file << entrance_.first << " " << entrance_.second << std::endl;
-        file << exit_.first << " " << exit_.second << std::endl;
-
         for (auto i = 0; i < rows_; i++) {
             for (auto j = 0; j < cols_; j++) {
                 file << vWalls_(i, j) << " ";
