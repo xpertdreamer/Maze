@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "astar.h"
 #include "maze.h"
 
 int main() {
@@ -10,6 +11,7 @@ int main() {
 
     std::cout << "Commands: " << std::endl;
     std::cout << "gen <rows> <cols>" << std::endl;
+    std::cout << "find" << std::endl;
     std::cout << "file <filename>" << std::endl;
     std::cout << "save <filename>" << std::endl;
     std::cout << "print" << std::endl;
@@ -43,6 +45,21 @@ int main() {
             } else {
                 std::cout << "Error: Need two numbers (rows cols)" << std::endl;
             }
+        } else if (command == "find") {
+            if (!maze_initialized) {
+                std::cout << "Error: Maze is not initialized!" << std::endl;
+                continue;
+            }
+            course::Astar astar(maze);
+                if (auto path = astar.find_path(); !path.empty()) {
+                    #ifdef _WIN32
+                    system("cls");
+                    #else
+                    system("clear");
+                    #endif
+                    astar.print_path(path);
+                } else
+                    std::cout << "Path is empty!" << std::endl;
         } else if (command == "file") {
             std::string filename;
             if (iss >> filename) {

@@ -39,6 +39,7 @@ namespace course {
 
         std::vector<std::pair<int, int>> find_path();
         void print_path(const std::vector<std::pair<int, int>> &path);
+        void print_path_at(const std::vector<std::pair<int, int>>& path);
         std::vector<std::pair<int, int>> get_path() { return path_; }
 
     private:

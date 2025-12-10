@@ -12,33 +12,48 @@
 namespace course {
     double Astar::heuristic(const std::pair<int, int> &dot_a, const std::pair<int, int> &dot_b) {
         // Manhattan distance
-        return std::abs(dot_a.first - dot_b.second) + std::abs(dot_a.second - dot_b.first);
+        return std::abs(dot_a.first - dot_b.first) + std::abs(dot_a.second - dot_b.second);
     }
 
-    bool Astar::is_valid_move(const int from_row, const int from_col, const int to_row, const int to_col) const {
-        if (to_row < 0 || to_row >= maze_.getRows() || to_col < 0 || to_col >= maze_.getCols())
+    bool Astar::is_valid_move(const int from_row, const int from_col,
+                          const int to_row, const int to_col) const {
+        // Validate target coordinates are within maze bounds
+        if (to_row < 0 || to_row >= maze_.getRows() ||
+            to_col < 0 || to_col >= maze_.getCols()) {
             return false;
+            }
 
-        if (from_row == to_row) {
-            // Horizontal movement
-            const int min_col = std::min(from_row, to_col);
-            if (const int col_diff = to_col - from_row; col_diff == 0 || col_diff == -1)
-                return !maze_.get_v_walls()(from_row, min_col);
-        } else if (from_row == to_col) {
-            // Vertical movement
+        const int dr = to_row - from_row;
+        const int dc = to_col - from_col;
+
+        // Movement must be exactly one step in cardinal direction
+        const bool is_horizontal = (dr == 0 && abs(dc) == 1);
+        const bool is_vertical = (abs(dr) == 1 && dc == 0);
+
+        if (!is_horizontal && !is_vertical)
+            return false; // Diagonal or multi-step movement
+
+
+        // Check walls based on movement direction
+        if (is_horizontal) {
+            // Moving horizontally - check vertical walls
+            const int min_col = std::min(from_col, to_col);
+            return !maze_.get_v_walls()(from_row, min_col);
+        } else { // is_vertical
+            // Moving vertically - check horizontal walls
             const int min_row = std::min(from_row, to_row);
-            if (const int row_diff = to_row - from_row; row_diff == 0 || row_diff == -1)
-                return !maze_.get_h_walls()(min_row, from_col);
+            return !maze_.get_h_walls()(min_row, from_col);
         }
-
-        return false;
     }
 
     std::vector<std::pair<int, int> > Astar::get_neighbors(const std::pair<int, int> &node) const {
         std::vector<std::pair<int, int>> neighbors;
 
         const std::vector<std::pair<int, int>> directions = {
-            {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+            {-1, 0},
+            {1, 0},
+            {0, -1},
+            {0, 1}
         };
 
         for (const auto&[fst, snd] : directions) {
@@ -67,128 +82,244 @@ namespace course {
         return path;
     }
 
-    std::vector<std::pair<int, int> > Astar::find_path() {
+    std::vector<std::pair<int, int>> Astar::find_path() {
         const auto start = maze_.get_entrance();
-        const auto end = maze_.get_exit();
-        // Priority queue for nodes with smallest f
+        const auto goal = maze_.get_exit();
+
+        // Quick check: start equals goal
+        if (start == goal) {
+            path_ = {start};
+            return path_;
+        }
+
+        // Data structures for A*
         std::priority_queue<Node, std::vector<Node>, std::greater<>> open_set;
-        // Set of nodes visited
-        std::set<std::pair<int, int> > closed_set;
-        // Map to restore the path
-        std::map<std::pair<int, int>, std::pair<int, int> > came_from;
-        // Best known costs
-        std::map<std::pair<int, int>, double> costs;
+        std::set<std::pair<int, int>> closed_set;
+        std::map<std::pair<int, int>, std::pair<int, int>> came_from;
+        std::map<std::pair<int, int>, double> g_score;
 
-        costs[start] = 0;
-        open_set.emplace(start, 0, heuristic(start, end));
+        // Initialize with start node
+        g_score[start] = 0.0;
+        open_set.emplace(start, 0.0, heuristic(start, goal));
 
+        // Main A* loop
         while (!open_set.empty()) {
-            // The vertex from the open_set with the lowest f(x) score.
             Node current = open_set.top();
             open_set.pop();
 
-            if (current.coord == end) {
+            // Skip if already processed
+            if (closed_set.contains(current.coord)) {
+                continue;
+            }
+
+            // Check if we reached the goal
+            if (current.coord == goal) {
                 path_ = reconstruct_path(came_from, current.coord);
                 return path_;
             }
 
-            // Skip already processed nodes
-            if (closed_set.contains(current.coord)) continue;
+            closed_set.insert(current.coord);
 
-            // Checking all neigbours
-            for (const auto& neigbours_pos : get_neighbors(current.coord)) {
-                if (closed_set.contains(neigbours_pos)) continue;
+            // Explore neighbors
+            for (const auto& neighbor : get_neighbors(current.coord)) {
+                if (closed_set.contains(neighbor)) {
+                    continue;
+                }
 
-                // The cost of moving between adjacent cells is always 1
-                // If this is a new node or a better path has been found
-                if (const double tent_cost = costs[current.coord] + 1; !costs.contains(neigbours_pos)
-                    || tent_cost < costs[neigbours_pos]) {
-                    came_from[neigbours_pos] = current.coord;
-                    costs[neigbours_pos] = tent_cost;
+                // Calculate tentative g-score
+                double tentative_g = g_score[current.coord] + 1.0;
 
-                    const double h = heuristic(neigbours_pos, end);
-                    const double f = tent_cost + h;
+                // Update if we found a better path
+                if (!g_score.contains(neighbor) || tentative_g < g_score[neighbor]) {
+                    came_from[neighbor] = current.coord;
+                    g_score[neighbor] = tentative_g;
 
-                    open_set.emplace(neigbours_pos, f, h);
+                    // Calculate heuristic and add to open set
+                    double h = heuristic(neighbor, goal);
+                    open_set.emplace(neighbor, tentative_g, h);
                 }
             }
         }
 
-        std::cout << "Path not found" << std::endl;
+        // No path found
         return {};
     }
 
-    void Astar::print_path(const std::vector<std::pair<int, int> > &path) {
+    void Astar::print_path(const std::vector<std::pair<int, int>>& path) {
         if (path.empty()) {
             std::cout << "Path is empty" << std::endl;
             return;
         }
 
-        std::vector<std::vector<char>> display(maze_.getRows(), std::vector<char>(maze_.getCols(), ' '));
+        const auto entrance = maze_.get_entrance();
+        const auto exit = maze_.get_exit();
+        const int rows = maze_.getRows();
+        const int cols = maze_.getCols();
 
+        // Create display grid initialized with spaces
+        std::vector<std::vector<char>> display(rows, std::vector<char>(cols, ' '));
+
+        // Mark path with directional markers
         for (size_t i = 0; i < path.size(); i++) {
-            const int row = path[i].first;
-            const int col = path[i].second;
+            const auto [row, col] = path[i];
 
             if (i == 0) {
-                display[row][col] = 'S'; // Start
+                display[row][col] = 'E'; // Entrance marker
             } else if (i == path.size() - 1) {
-                display[row][col] = 'E'; // End
-            } else {
-                if (i < path.size() - 1) {
-                    const int next_row = path[i+1].first;
-                    const int next_col = path[i+1].second;
+                display[row][col] = 'X'; // Exit marker
+            } else if (i + 1 < path.size()) {
+                const auto [next_row, next_col] = path[i + 1];
 
-                    if (next_row > row) display[row][col] = 'v';
-                    else if (next_row < row) display[row][col] = '^';
-                    else if (next_col > col) display[row][col] = '>';
-                    else if (next_col < col) display[row][col] = '<';
-                }
+                if (next_row > row)      display[row][col] = 'v';
+                else if (next_row < row) display[row][col] = '^';
+                else if (next_col > col) display[row][col] = '>';
+                else if (next_col < col) display[row][col] = '<';
             }
         }
 
         std::cout << "\nMaze with A* path:\n\n";
-        for (size_t i = 0; i < maze_.getCols(); i++)
-            std::cout << "+---";
-        std::cout << "+" << std::endl;
 
-        for (int i = 0; i < maze_.getRows(); i++) {
+        // Print top border with entrance marker
+        for (int j = 0; j < cols; j++) {
+            std::cout << "+";
+            if (entrance.first == 0 && entrance.second == j) {
+                std::cout << " E "; // Entrance at top border
+            } else {
+                std::cout << "---";
+            }
+        }
+        std::cout << "+\n";
+
+        // Print maze rows with walls and path markers
+        for (int i = 0; i < rows; i++) {
             std::cout << "|";
-            for (int j = 0; j < maze_.getCols(); j++) {
-                // Vertical walls
+
+            for (int j = 0; j < cols; j++) {
                 std::cout << " " << display[i][j] << " ";
-                if (j < maze_.getCols() - 1)
-                    if (maze_.get_v_walls()(i, j))
-                        std::cout << "|";
-                    else
-                        std::cout << " ";
-                else
+
+                // Print vertical wall if exists
+                if (j < cols - 1) {
+                    std::cout << (maze_.get_v_walls()(i, j) ? "|" : " ");
+                } else {
                     std::cout << "|";
+                }
             }
             std::cout << std::endl;
 
-            if (i < maze_.getRows() - 1) {
+            // Print horizontal walls between rows (except after last row)
+            if (i < rows - 1) {
                 std::cout << "+";
-                for (int j = 0; j < maze_.getCols(); j++) {
-                    // Horizontal walls
-                    if (maze_.get_h_walls()(i, j))
-                        std::cout << "---+";
-                    else
-                        std::cout << "   +";
+                for (int j = 0; j < cols; j++) {
+                    std::cout << (maze_.get_h_walls()(i, j) ? "---+" : "   +");
                 }
                 std::cout << std::endl;
             }
         }
 
+        // Print bottom border with exit marker
         std::cout << "+";
-        for (int j = 0; j < maze_.getCols(); j++) std::cout << "---+";
-        std::cout << std::endl << std::endl;
+        for (int j = 0; j < cols; j++) {
+            if (exit.first == rows - 1 && exit.second == j) {
+                std::cout << " X +"; // Exit at bottom border
+            } else {
+                std::cout << "---+";
+            }
+        }
+        std::cout << "\n\n";
 
+        std::cout << "Legend:\n";
+        std::cout << "  E = Entrance\n";
+        std::cout << "  X = Exit\n";
+
+        // Print path statistics
         std::cout << "Path statistics:\n";
-        std::cout << "  Start: (" << path[0].first << ", " << path[0].second << ")\n";
-        std::cout << "  End: (" << path.back().first << ", " << path.back().second << ")\n";
         std::cout << "  Path length: " << path.size() - 1 << " steps\n";
         std::cout << "  Total cells in path: " << path.size() << "\n\n";
     }
 
+    void Astar::print_path_at(const std::vector<std::pair<int, int>>& path) {
+        if (path.empty()) {
+            std::cout << "Path is empty" << std::endl;
+            return;
+        }
+
+        const auto entrance = maze_.get_entrance();
+        const auto exit = maze_.get_exit();
+        const int rows = maze_.getRows();
+        const int cols = maze_.getCols();
+
+        // Create display grid initialized with spaces
+        std::vector<std::vector<char>> display(rows, std::vector<char>(cols, ' '));
+
+        // Mark the entire path with '*'
+        for (const auto& [row, col] : path) {
+            display[row][col] = '*';
+        }
+
+        // Overwrite entrance and exit with special markers
+        display[entrance.first][entrance.second] = 'E';
+        display[exit.first][exit.second] = 'X';
+
+        std::cout << "\nMaze with A* path:\n\n";
+
+        // Print top border with entrance marker
+        for (int j = 0; j < cols; j++) {
+            std::cout << "+";
+            if (entrance.first == 0 && entrance.second == j) {
+                std::cout << " E "; // Entrance at top border
+            } else {
+                std::cout << "---";
+            }
+        }
+        std::cout << "+\n";
+
+        // Print maze rows with walls and path markers
+        for (int i = 0; i < rows; i++) {
+            std::cout << "|";
+
+            for (int j = 0; j < cols; j++) {
+                // Print cell with path marker if present
+                std::cout << " " << display[i][j] << " ";
+
+                // Print vertical wall if exists
+                if (j < cols - 1) {
+                    std::cout << (maze_.get_v_walls()(i, j) ? "|" : " ");
+                } else {
+                    std::cout << "|";
+                }
+            }
+            std::cout << std::endl;
+
+            // Print horizontal walls between rows (except after last row)
+            if (i < rows - 1) {
+                std::cout << "+";
+                for (int j = 0; j < cols; j++) {
+                    std::cout << (maze_.get_h_walls()(i, j) ? "---+" : "   +");
+                }
+                std::cout << std::endl;
+            }
+        }
+
+        // Print bottom border with exit marker
+        std::cout << "+";
+        for (int j = 0; j < cols; j++) {
+            if (exit.first == rows - 1 && exit.second == j) {
+                std::cout << " X +"; // Exit at bottom border
+            } else {
+                std::cout << "---+";
+            }
+        }
+        std::cout << "\n\n";
+
+        // Print legend for clarity
+        std::cout << "Legend:\n";
+        std::cout << "  E = Entrance\n";
+        std::cout << "  X = Exit\n";
+        std::cout << "  * = Path\n\n";
+
+        // Print path statistics
+        std::cout << "Path statistics:\n";
+        std::cout << "  Path length: " << path.size() - 1 << " steps\n";
+        std::cout << "  Total cells in path: " << path.size() << "\n\n";
+    }
 }
