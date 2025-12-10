@@ -6,6 +6,7 @@
 #define MAZE_H
 
 #define EMPTY 0
+#define INC 0.05
 
 #include <fstream>
 #include <iosfwd>
@@ -22,6 +23,7 @@ namespace course {
         int counter_{0};
         std::pair<int, int> entrance_;
         std::pair<int, int> exit_;
+        double static probability;
 
     public:
         int getRows() const { return rows_; }
