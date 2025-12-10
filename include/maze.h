@@ -28,6 +28,8 @@ namespace course {
         int getCols() const { return cols_; }
         Matrix& get_h_walls() {return hWalls_;}
         Matrix& get_v_walls() {return vWalls_;}
+        Matrix get_h_walls() const  {return hWalls_;}
+        Matrix get_v_walls() const {return vWalls_;}
         auto get_entrance() const { return entrance_; }
         auto get_exit() const { return exit_; }
 
