@@ -12,20 +12,13 @@ namespace course {
         counter_ = 1;
         entrance_ = {0, 0};
         exit_ = {rows_ - 1, cols_ - 1};
-        probability = 0.5;
     }
 
     bool Maze::get_random_bool() {
         std::random_device rd;
         std::default_random_engine rng(rd());
-        std::uniform_int_distribution<double> dist(0, 1);
-
-        if (const double rand_num = dist(rng); rand_num < INC) {
-            probability = std::min(probability + INC, 1.0);
-            return true;
-        }
-
-        return false;
+        std::uniform_int_distribution<int> dist(0, 1);
+        return static_cast<bool>(dist(rng));
     }
 
     // Merging cells into one set
