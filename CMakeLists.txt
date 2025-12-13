@@ -19,8 +19,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 add_subdirectory(src)
 
-add_executable(Maze src/main.cpp
-        include/maze.h)
+add_executable(Maze src/main.cpp)
 
 target_link_libraries(Maze PRIVATE
     maze_lib
@@ -31,7 +30,7 @@ target_include_directories(Maze PRIVATE ${CMAKE_SOURCE_DIR}/include)
 set_target_properties(Maze PROPERTIES
         CXX_EXTENSIONS OFF
         CXX_STANDARD_REQUIRED ON
-        OUTPUT_NAME "Maze"
+        OUTPUT_NAME "maze_persistent"
 )
 
 

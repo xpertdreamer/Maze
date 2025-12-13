@@ -2,6 +2,7 @@ add_library(maze_lib
         maze.cpp
         matrix.cpp
         astar.cpp
+        racemode.cpp
 )
 
 target_include_directories(maze_lib
