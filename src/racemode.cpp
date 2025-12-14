@@ -347,6 +347,19 @@ void RaceMode::save_results_to_file(const std::string& filename) const {
         file << "  Extra moves: " << (player_stats_.moves - astar_stats_.moves) << "\n";
         file << "  Time ratio: " << std::fixed << std::setprecision(1)
              << (player_stats_.time_seconds / astar_stats_.time_seconds) << "x slower\n";
+        file << "\n";
+        if (player_stats_.moves == astar_stats_.moves) {
+            file << std::fixed << "⭐⭐⭐ PERFECT! Optimal path! ⭐⭐⭐\n";
+        } else if (efficiency >= 90.0) {
+            file << std::fixed << "🌟 EXCELLENT! Very close to optimal!\n";
+        } else if (efficiency >= 75.0) {
+            file << std::fixed << "👍 GOOD! Solid performance!\n";
+        } else if (efficiency >= 50.0) {
+            file << std::fixed << "📈 Not bad! Room for improvement!\n";
+        } else {
+            file << std::fixed << "💪 Keep practicing! You'll get better!\n";
+        }
+
     }
 
     file.close();
