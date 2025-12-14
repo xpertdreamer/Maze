@@ -30,7 +30,7 @@ target_include_directories(Maze PRIVATE ${CMAKE_SOURCE_DIR}/include)
 set_target_properties(Maze PROPERTIES
         CXX_EXTENSIONS OFF
         CXX_STANDARD_REQUIRED ON
-        OUTPUT_NAME "maze_persistent"
+        OUTPUT_NAME "maze"
 )
 
 
