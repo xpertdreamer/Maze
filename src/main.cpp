@@ -93,7 +93,8 @@ int main(const int argc, char **argv) {
             command == "current" || command.find("race_") == 0) {
             maze_loaded = load_current_maze(maze);
 
-            if (!maze_loaded && command != "current" && command.find("race_") != 0) {
+            // Commands that absolutely require a loaded maze
+            if (!maze_loaded && command != "current") {
                 std::cout << "Error: No maze loaded. Use 'gen' or 'load' command first.\n";
                 return 1;
             }
@@ -213,16 +214,9 @@ int main(const int argc, char **argv) {
             return 1;
         }
 
-        // Race Mode Commands
+        // Race Mode Commands - maze must be loaded at this point
         if (command.find("race_") == 0) {
-            if (!maze_loaded) {
-                std::cout << "ERROR: No maze loaded for race mode!\n";
-                std::cout << "Please generate or load a maze first:\n";
-                std::cout << "  maze.exe gen 10 15\n";
-                return 1;
-            }
-
-            // Create race mode instance (stateless, reads from temp file each time)
+            // Create race mode instance
             course::RaceMode race(maze);
 
             if (command == "race_start") {
@@ -260,9 +254,7 @@ int main(const int argc, char **argv) {
                 return 1;
             }
 
-            // Start race automatically for movement commands
-            race.start_race();
-
+            // Load race state and continue
             bool moved = false;
             if (command == "race_up") {
                 moved = race.move_up();

@@ -55,6 +55,7 @@ namespace course {
         void prepare_new_line(int row);
         void add_end_line();
         void check_end_line();
+        void open_entrance_exit();
 
         inline void allocate_walls();
         void parse_size();
