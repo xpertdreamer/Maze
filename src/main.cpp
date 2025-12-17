@@ -158,7 +158,7 @@ int main(const int argc, char **argv) {
             }
         }
         if (command == "save") {
-            std::string filename = TEMP_FILE;
+            std::string filename = "maze.txt";
             if (argc >= 3) {
                 filename = argv[2];
             }
